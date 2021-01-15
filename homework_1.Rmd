@@ -1,0 +1,58 @@
+---
+title: "Untitled"
+author: "Jeremy Lin"
+date: "1/15/2021"
+output: pdf_document
+---
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+# load libraries------------------------
+library(knitr)
+library(pracma) #library  to print answer
+library(ggplot2)
+library(tidyr)
+library(gridExtra)
+library(MASS)
+library(tidyverse)
+
+# function p is to round 
+p <- function(x) {
+  formatC(x, format="f", digits = 3)
+    }
+
+formatL <- function(x) {
+  formatC(x, format="f", digits = 0)
+}
+```
+
+## Problem 1
+
+```{r}
+# Posterior Distribution 
+
+# Number of individual in pilot study
+n <- 5
+# Number ofIndividual that click the post
+x <- 3
+
+# Prior distribution of theta
+# List of theta
+theta <- c(0.3,0.4,0.5,.6,.7)
+# Probability of theta 
+p_theta_prior <- c(.05,.05,.8,.05,.05)
+
+# Probability of x = 3 given various theta from the prior dist
+p_x_theta <-sapply(theta,
+                   function(a) choose(n, x)*a ^ x * (1 - a) ^ (n - x))
+
+# Probability of x = 3
+p_x = as.numeric(t(p_x_theta) %*% p_theta_prior)
+
+# Computing the posterior distribution 
+# Probability of theta given x = 3 
+p_theta_x <- (p_x_theta * p_theta)/ p_x
+```
+
+```{r}
+
+```
+
