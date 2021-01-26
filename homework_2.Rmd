@@ -1,0 +1,158 @@
+---
+title: "Homework 2"
+author: "Jeremy Lin"
+date: "1/26/2021"
+output: 
+  pdf_document :
+    keep_tex: true
+    extra_dependencies: "subfig"
+header-includes:
+ - \usepackage{booktabs}
+ - \usepackage{longtable}
+ - \usepackage{array}
+ - \usepackage{multirow}
+ - \usepackage{wrapfig}
+ - \usepackage{float}
+ - \usepackage{subfig}
+ - \floatplacement{figure}{H}
+---
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+# load libraries------------------------
+library(knitr)
+library(ggplot2)
+library(tidyr)
+library(gridExtra)
+library(tidyverse)
+library(dplyr)
+library(kableExtra)
+
+# function roundp is to round 
+roundp <- function(x) {
+  formatC(x, format="f", digits = 3)
+    }
+
+l <- function(x) {
+  formatC(x, format="f", digits = 0)
+}
+```
+
+## Problem 1 
+```{r 1-dist}
+# data 
+snowfall <- c(38.6, 42.4, 57.5, 40.5, 51.7, 67.1, 33.4, 60.9, 64.1, 40.1, 40.7, 6.4)
+# number of data 
+n <- length(snowfall)
+# sampling standard deviation of data
+sigma <- 10 
+
+# prior distribution 
+# prior mean 
+prior_mean <- 40 
+# prior standard deviation 
+prior_s <- (42 - 38) / (2* qnorm(.975))
+# prior precission 
+prior_precision <- 1 / (prior_s) ^ 2 
+
+# posterior distribution 
+# post precission 
+post_precision <- prior_precision + (n / sigma ^ 2)
+# posterior standard deviation 
+post_s <- sqrt(1 / post_precision)
+#posterior mean 
+post_mean <- 
+  (prior_precision / post_precision * prior_mean) +
+  ((n / sigma ^ 2) / post_precision * mean(snowfall))
+```
+
+```{r fig.asp=0.5,fig.align="left", results=FALSE}
+# plot posterior distribution 
+ggplot(data = data.frame(x = c(35, 45)),
+       aes(x)) +
+  stat_function(
+    mapping = aes(colour = "Prior Distribution"),
+    fun = dnorm,
+    n = 501,
+    args = list(mean = prior_mean,
+                sd = prior_s)
+  ) +
+  stat_function(
+    mapping = aes(colour = "Posterior Distribution"),
+    fun = dnorm,
+    n = 501,
+    args = list(mean = post_mean,
+                sd = post_s)
+  ) +
+  scale_colour_manual(values = c("red", "blue")) +
+  labs(x = expression(theta),
+       y = "densities",
+       title = "Prior and Posterior Distribution") +
+  scale_y_continuous(breaks = NULL)
+```
+
+
+```{r 1-quantile}
+# 10% quantiles 
+q_10 <- qnorm(0.1, mean = post_mean, sd = post_s)
+
+# 90% quantiles 
+q_90 <- qnorm(0.9, mean = post_mean, sd = post_s)
+```
+
+```{r}
+# expected value of g(mu) using monte carlo 
+n <- 10 ^ 6 
+g_theta <- log(rnorm(n,mean = post_mean, sd = post_s))
+exp_g <- mean(g_theta)
+```
+
+```{r 2-dist}
+n <- 50 
+y <- c(30, 12, 6, 2)
+
+```
+```{r}
+bisection <- function(f, a, b, n = 1000, tol = 1e-7) {
+  # If the signs of the function at the evaluated points, a and b, stop the function and return message.
+  if (!(f(a) < 0) && (f(b) > 0)) {
+    stop('signs of f(a) and f(b) differ')
+  } else if ((f(a) > 0) && (f(b) < 0)) {
+    stop('signs of f(a) and f(b) differ')
+  }
+  
+  for (i in 1:n) {
+    c <- (a + b) / 2 # Calculate midpoint
+    
+    # If the function equals 0 at the midpoint or the midpoint is below the desired tolerance, stop the 
+    # function and return the root.
+    if ((f(c) == 0) || ((b - a) / 2) < tol) {
+      return(c)
+    }
+    
+    # If another iteration is required, 
+    # check the signs of the function at the points c and a and reassign
+    # a or b accordingly as the midpoint to be used in the next iteration.
+    ifelse(sign(f(c)) == sign(f(a)), 
+           a <- c,
+           b <- c)
+  }
+  # If the max number of iterations is reached and no root has been found, 
+  # return message and end function.
+  print('Too many iterations')
+}
+```
+
+
+```{r 3}
+fun <- function(b) {
+  lambda_0 <- 0.75
+  a <- 100 * b ^ 2
+  root <- pgamma(lambda_0, a, 1 / b, lower.tail = FALSE) - 0.5
+  return(root)
+}
+
+b_priori <- bisection(fun, 0.1, 0.5)
+a_priori <- 100 * b ^ 2
+```
+
