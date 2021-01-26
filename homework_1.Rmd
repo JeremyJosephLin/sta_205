@@ -1,32 +1,47 @@
 ---
-title: "Untitled"
+title: "Homework 1"
 author: "Jeremy Lin"
 date: "1/15/2021"
-output: pdf_document
+output: 
+  pdf_document :
+    keep_tex: true
+    extra_dependencies: "subfig"
+header-includes:
+ - \usepackage{booktabs}
+ - \usepackage{longtable}
+ - \usepackage{array}
+ - \usepackage{multirow}
+ - \usepackage{wrapfig}
+ - \usepackage{float}
+ - \usepackage{subfig}
+ - \floatplacement{figure}{H}
 ---
 ```{r message=FALSE, warning=FALSE, echo=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
 # load libraries------------------------
 library(knitr)
-library(pracma) #library  to print answer
 library(ggplot2)
 library(tidyr)
 library(gridExtra)
-library(MASS)
 library(tidyverse)
+library(dplyr)
+library(kableExtra)
 
-# function p is to round 
-p <- function(x) {
+# function roundp is to round 
+roundp <- function(x) {
   formatC(x, format="f", digits = 3)
     }
 
-formatL <- function(x) {
+l <- function(x) {
   formatC(x, format="f", digits = 0)
 }
 ```
 
 ## Problem 1
 
-```{r}
+### Compute the posterior distribution $p(\theta|x=3)$.
+
+```{r 1a}
 # Posterior Distribution 
 
 # Number of individual in pilot study
@@ -49,10 +64,312 @@ p_x = as.numeric(t(p_x_theta) %*% p_theta_prior)
 
 # Computing the posterior distribution 
 # Probability of theta given x = 3 
-p_theta_x <- (p_x_theta * p_theta)/ p_x
+p_theta_posterior <- (p_x_theta * p_theta_prior)/ p_x
 ```
 
-```{r}
 
+|$\theta$    | 0.3      | 0.4 | .5  | .6 | .7| 
+|-----|-------|-------|-------|------|------|
+| $p(\theta)$|  `r roundp(p_theta_posterior[1])` |  `r roundp(p_theta_posterior[2])` |  `r roundp(p_theta_posterior[3])` | `r roundp(p_theta_posterior[4])`| `r roundp(p_theta_posterior[5])` 
+
+### Compute the posterior mean, $E(\theta|x=3)$, which can be assumed as a possible estimator of the population proportion, based on the observed data.
+
+```{r 1b}
+# calculating expected value 
+exp_theta <- as.numeric(t(theta) %*% (p_theta_posterior))
+```
+
+\begin{align}
+  E(\theta|x = 3) &= \sum \theta * p(\theta|x = 3) \\
+  E(\theta|x = 3) &= `r exp_theta`
+\end{align}
+
+
+### Suppose I conduct a more thorough study, and obtain data from 10 more individuals. Among them, eight clicked on the post. Based on the currently available information, how would you update your inference on the parameter $\theta$? 
+
+
+```{r 1c}
+# Posterior Distribution 
+# Number of individual in new study
+n <- 10
+# Number of Individual that click the post
+x <- 8
+
+# Prior distribution of theta
+# update prior distribution 
+p_theta_prior <- p_theta_posterior
+
+# Probability of x =  given various theta from the prior dist
+p_x_theta <-sapply(theta,
+                   function(a) choose(n, x)*a ^ x * (1 - a) ^ (n - x))
+
+# Probability of x = 3
+p_x = as.numeric(t(p_x_theta) %*% p_theta_prior)
+
+# Computing the posterior distribution 
+# Probability of theta given x = 3 
+p_theta_posterior <- (p_x_theta * p_theta_prior)/ p_x
+```
+The updated posterior distribution $p(\theta|x = 8)$
+
+|$\theta$    | 0.3      | 0.4 | .5  | .6 | .7| 
+|-----|-------|-------|-------|------|------|
+| $p(\theta)$|  `r roundp(p_theta_posterior[1])` |  `r roundp(p_theta_posterior[2])` |  `r roundp(p_theta_posterior[3])` | `r roundp(p_theta_posterior[4])`| `r roundp(p_theta_posterior[5])` 
+
+### Based on the results from (3), would you conclude that the campaign marketing post is successful, or you'd look for a better post? [This is a thought-provoking question at this point; try your best about to answer it]
+
+To conclude that campaign marketing post is successful, I will use a cut off of 50% chance or greater that a person will click on the post ($\theta >0.6$. The probability of theres is more than 60% chance a person will click on the post is equal to `r roundp(p_theta_posterior[4]+p_theta_posterior[4]+p_theta_posterior[5])`, Therefore I think this marketing is succesfull.
+
+## Problem 2 
+
+### Based on the interim analysis, what is the posterior distribution of  $\theta$?
+
+
+From interim analysis 20(y = 20) out of 30(n = 30) patients had a positive outcome. Assume uniform prior on $\theta$. 
+```{r 2a}
+n <- 30
+y <- 20 
+
+# prior theta (a = 1, b =1 )
+a_prior <- 1
+b_prior <- 1 
+
+# posterior theta
+a_posterior <- a_prior + y
+b_posterior <- b_prior + n - y
+
+```
+
+Posterior distribution : 
+$$\theta|y \sim Beta(`r a_posterior`, `r b_posterior`)$$
+
+### What is a possible point estimate for $\theta$?
+```{r 2b}
+expected_theta <- (a_posterior)/ (a_posterior + b_posterior)
+```
+
+
+Possible point estimate : 
+\begin{align}
+  E(\theta|y) = \frac{a+y}{a+b+n} 
+  = \frac{`r a_posterior`}{`r (a_posterior + b_posterior)`}
+  \approx `r roundp(expected_theta)`
+\end{align} 
+
+### Find the 5\% and 95\% quantiles of the posterior distribution.
+
+```{r 2c}
+post_95CI <- qbeta(c(0.05, 0.95),a_posterior,b_posterior)
+```
+
+The 5\% quantile is `r post_95CI[1]` and the 95\% quantile is `r post_95CI[2]`
+
+### In the continuation of the trial, 50 out of the remaining patients have had a positive outcome. What is the updated posterior of $\theta$? What is a possible estimate for $\theta$? Find the 5\% and 95\% quantiles of the distribution.
+
+```{r 2d}
+# update the n and y 
+n <- 70
+y <- 50 
+
+# update prior dist 
+a_prior <- a_posterior
+b_prior <- b_posterior
+
+# new posterior distribution 
+a_posterior <- a_prior + y
+b_posterior <- b_prior + n - y
+
+# expected value of posterior theta
+expected_theta <- (a_posterior )/ (a_posterior + b_posterior)
+
+# 95 percent ci 
+post_95CI <- qbeta(c(0.05, 0.95),a_posterior,b_posterior)
+```
+The updated posterior $\theta$ is : 
+$$\theta|y \sim Beta(`r a_posterior`, `r b_posterior`)$$
+Possible point estimate : 
+\begin{align}
+  E(\theta|y) = \frac{a+y}{a+b+n} 
+  = \frac{`r a_posterior`}{`r (a_posterior + b_posterior)`}
+  \approx `r roundp(expected_theta)`
+\end{align} 
+
+The 5\% quantile is `r roundp(post_95CI[1])` and the 95\% quantile is `r roundp(post_95CI[2])`
+
+### Based on the results from the analysis, does the treatment appear promising?
+Since we are 90% sure that the percentage of patient having a positive outcome because of the treatment is between between `r roundp(100 * post_95CI[1])`\% and `r roundp(100 * post_95CI[2])`\%. therefore I believe that the treatment appear promising.
+
+## Problem 3 
+
+```{r 3init}
+# Initialize table 
+clutch_makes <- c(64,72,55,27,75,24,28,66,40,13)
+clutch_attempt <- c(75,95,63,39,83,26,41,82,54,16)
+overal_prop <- c(0.845,0.847,0.880,0.674,0.909,0.898,0.770,0.801,0.802,0.875)
+player_name <- c("Russel Westbrook","James Harden", "Kawhi Leonard", "LeBron James", "Isaiah Thomas", "Stephen Curry", "Giannis Antetokoumpo", "John Wall", "Anthony Davis", "Kevin Durant")
+```
+
+### Describe your model for studying the clutch success probability of each subject, including the likelihood and prior.
+
+We want to study the clutch success probability, i.e the proportion of number of clutch success over the number of clutch attempts. For this type of data, we assume Binomial likelihood, with a uniform prior (Beta(1,1)) distribution. 
+Therefore our likelihood function is :
+$$L(y|\theta) \propto \theta^y (1-\theta)^{n-y} $$
+with prior distribution 
+$$\theta_{prior} \sim Beta(1,1)$$
+
+### Plot the posterior distribution of the clutch success probabilities for James Harden and Le Bron James.
+
+
+#### Posterior Distribution of James Harden :
+
+```{r 3.2}
+name <- "James Harden"
+# attempt and succes
+n <- clutch_attempt[player_name == name]
+y <- clutch_makes[player_name == name]
+
+# prior theta (a = 1, b =1 )
+a_prior <- 1
+b_prior <- 1 
+
+# posterior theta
+a_posterior <- a_prior + y
+b_posterior <- b_prior + n - y
+```
+$$p(\theta|y) \sim Beta(`r a_posterior`, `r b_posterior`) $$
+with the distribution plot: 
+```{r fig.asp=0.5,fig.align="left", results=FALSE}
+# plot posterior distribution 
+ggplot(data = data.frame(x = c(0.5, 1)),
+       aes(x)) +
+  stat_function(fun = dbeta, 
+                n = 501, 
+                args = list(shape1 = a_posterior,
+                            shape2 = b_posterior)) +
+  xlab(expression(theta))
+  ylab("") +
+  scale_y_continuous(breaks = NULL)
+```
+
+#### Posterior Distribution of Lebron James
+
+```{r}
+name <- "LeBron James"
+# attempt and succes
+n <- clutch_attempt[player_name == name]
+y <- clutch_makes[player_name == name]
+
+# prior theta (a = 1, b =1 )
+a_prior <- 1
+b_prior <- 1 
+
+# posterior theta
+a_posterior <- a_prior + y
+b_posterior <- b_prior + n - y
+```
+$$p(\theta|y) \sim Beta(`r a_posterior`, `r b_posterior`) $$
+
+with the distribution plot: 
+
+```{r fig.asp=0.5, fig.pos="center", results=FALSE}
+# plot posterior distribution 
+ggplot(data = data.frame(x = c(0.4, 1)),
+       aes(x)) +
+  stat_function(fun = dbeta, 
+                n = 501, 
+                args = list(shape1 = a_posterior,
+                            shape2 = b_posterior)) +
+  xlab(expression(theta))
+  ylab("") +
+  scale_y_continuous(breaks = NULL)
+```
+
+### Summarize the posterior distribution *for each player* in a table. The table should include (at least) the posterior mean and the (5\%, 25\%, 50\%, 75\%, 95\%) posterior quantiles.
+
+Table 3 is the summary of the posterior distribution for each player.  
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+#initialize vector
+post_mean <- rep(0,length(clutch_attempt))
+post_5 <- rep(0,length(clutch_attempt))
+post_25 <- rep(0,length(clutch_attempt))
+post_50 <- rep(0,length(clutch_attempt))
+post_75 <- rep(0,length(clutch_attempt))
+post_95 <- rep(0,length(clutch_attempt))
+prob <- rep(0,length(clutch_attempt))
+
+# summarize posterior distribution for each player 
+for(player in seq(1:10)) {
+  # attempt and succes
+  n <- clutch_attempt[player]
+  y <- clutch_makes[player]
+  
+  # prior theta (a = 1, b =1 )
+  a_prior <- 1
+  b_prior <- 1
+  
+  # posterior theta
+  a_posterior <- a_prior + y
+  b_posterior <- b_prior + n - y
+  
+  # Summarize distribution
+  # expected value
+  post_mean[player] <-
+    (a_posterior ) / (a_posterior + b_posterior)
+  # 5% quantile
+  post_5[player] <- qbeta(0.05, a_posterior, b_posterior)
+  # 25% quantile
+  post_25[player] <- qbeta(0.25, a_posterior, b_posterior)
+  # 50% quantile
+  post_50[player] <- qbeta(0.50, a_posterior, b_posterior)
+  # 75% quantile
+  post_75[player] <- qbeta(0.75, a_posterior, b_posterior)
+  # 95% quantile
+  post_95[player] <- qbeta(0.95, a_posterior, b_posterior)
+  prob[player] <- pbeta(overal_prop[player], 
+                        a_posterior, 
+                        b_posterior, 
+                        lower.tail = FALSE)
+}
+
+# build dataframe for table 
+player_summary <- tibble(Player = player_name,
+                         post_mean = post_mean,
+                         post_5 = post_5,
+                         post_25 = post_25,
+                         post_50 = post_50,
+                         post_75 = post_75,
+                         post_95 = post_95)
+```
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+kable(player_summary,
+      format = "latex",
+      booktabs = TRUE,
+      caption = "Player Summary") %>% 
+  kable_styling(latex_options = "HOLD_position",
+                    full_width = F)
+```
+
+
+
+### Do you find evidence that any of the players have a different clutch percentage than overall percentage? [*Hint: test the hypothesis that the probability of "clutch" for a player is greater than their corresponding overall proportion*]
+
+Let the overall proportion be $\pi$ , Table 4 is the probability of clutch proportion is greater than their corresponding overall proportion ($p(\theta > \pi)$). James Harden, Giannis Antetokoumpo, Anthony Davis, and Kevin Durant has a pretty low probably that could indicate that the player have a different clutch percentage than their corresponding overall percentage. This could due because these players tend to avoid taking clutch shots (low number of clutch attempt), with an exception of James Harden Who have the most attempt through all the player. 
+
+Table 4 also provided the 90% credible interval of clutch percentage and James Harden overall proportion is the only one inside the 90% CI, therefore we have a strong evidence that James Harden have a different clutch percentage than his shot percentage.
+
+```{r message=FALSE, warning=FALSE, echo=FALSE}
+player_summary <- tibble(Player = player_name,
+                         probability = prob,
+                         post_5 = post_5,
+                         post_95 = post_95,
+                         overal_proportion = overal_prop
+                         )
+kable(player_summary,
+      format = "latex",
+      booktabs = TRUE,
+      caption = "Player Summary") %>% 
+  kable_styling(latex_options = "HOLD_position",
+                    full_width = F)
 ```
 
